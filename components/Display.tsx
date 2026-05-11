@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   expressionText: {
-    fontSize: 13,
+    fontSize: 19,
     color: COLORS.DISPLAY_TEXT,
     textAlign: 'right',
     lineHeight: 15,

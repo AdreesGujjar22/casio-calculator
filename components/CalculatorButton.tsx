@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Pressable,
   StyleSheet,
   Text,
   Vibration,
   View,
+  type DimensionValue,
 } from 'react-native';
 import { COLORS } from '../constants/colors';
+import SoundService from '../services/SoundService';
 
 interface CalculatorButtonProps {
   label: string;
@@ -16,6 +18,7 @@ interface CalculatorButtonProps {
   bottomLabel?: string;
   topLabelColor?: string;
   flex?: number;
+  height?: DimensionValue;
 }
 
 const CalculatorButton: React.FC<CalculatorButtonProps> = ({
@@ -26,7 +29,17 @@ const CalculatorButton: React.FC<CalculatorButtonProps> = ({
   bottomLabel,
   topLabelColor,
   flex = 1,
+  height = '80%',
 }) => {
+  useEffect(() => {
+    // Initialize the shared sound service
+    SoundService.getInstance().loadSound();
+  }, []);
+
+  const playClickSound = async () => {
+    SoundService.getInstance().playClickSound();
+  };
+
   if (color === 'spacer') {
     return <View style={{ flex }} />;
   }
@@ -50,28 +63,33 @@ const CalculatorButton: React.FC<CalculatorButtonProps> = ({
   const btn = getButtonColors();
 
   return (
-    <View style={[styles.outer, { flex }]}>
+    <View style={[styles.outer, { flex, height: height }]}>
+      {/* Top label outside the button */}
+      {topLabel && (
+        <Text style={[styles.outerTopLabel, { color: topLabelColor || COLORS.LABEL_SHIFT }]} numberOfLines={1}>
+          {topLabel}
+        </Text>
+      )}
+
       {/* Shadow layer underneath */}
       <View style={[styles.shadow, { backgroundColor: btn.shadow }]} />
-      
+
       <Pressable
         style={({ pressed }) => [
           styles.button,
-          { backgroundColor: btn.bg },
-          pressed && styles.pressed,
+          {
+            backgroundColor: btn.bg,
+            transform: [{ translateY: pressed ? 2 : 0 }],
+          },
         ]}
         onPress={() => {
           Vibration.vibrate(12);
+          playClickSound();
           onPress();
         }}
         android_ripple={{ color: 'rgba(0,0,0,0.15)', foreground: true }}
       >
         <View style={styles.content} pointerEvents="none">
-          {topLabel && (
-            <Text style={[styles.topLabel, { color: topLabelColor || COLORS.LABEL_SHIFT }]} numberOfLines={1}>
-              {topLabel}
-            </Text>
-          )}
           {bottomLabel && (
             <Text style={[styles.bottomLabel, { color: COLORS.LABEL_ALPHA }]} numberOfLines={1}>
               {bottomLabel}
@@ -89,63 +107,91 @@ const CalculatorButton: React.FC<CalculatorButtonProps> = ({
 const styles = StyleSheet.create({
   outer: {
     position: 'relative',
-    margin: 1.5,
+    marginHorizontal: 3,
+    marginVertical: 4,
+    justifyContent: 'flex-start',
   },
+
+  // Bottom plastic depth layer
   shadow: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: -3,
-    height: '100%',
-    borderRadius: 8,
+    bottom: -2,
+    top: 2,
+    borderRadius: 7,
+    opacity: 1,
   },
+
   button: {
-    position: 'relative',
     flex: 1,
-    borderRadius: 8,
+    borderRadius: 7,
     justifyContent: 'center',
     alignItems: 'center',
-    // Slight top highlight for 3D effect
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
+    // Main plastic feel
+    borderTopWidth: 1.2,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+
+    borderTopColor: 'rgba(255,255,255,0.18)',
+    borderLeftColor: 'rgba(255,255,255,0.08)',
+    borderRightColor: 'rgba(0,0,0,0.12)',
+
+    // Slight inset look
+    borderBottomWidth: 0,
+    borderBottomColor: 'rgba(0,0,0,0.35)',
   },
+
   pressed: {
     transform: [{ translateY: 2 }],
-    opacity: 0.9,
   },
+
   content: {
     width: '100%',
-    height: '100%',
+    top: 2,
+    bottom: -2,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 2,
+    paddingBottom: 1,
   },
+
   label: {
     fontSize: 13,
     fontWeight: '700',
-    fontFamily: 'Arial',
-    letterSpacing: 0.3,
+    color: '#fff',
+
+    // Casio-like compact text
+    letterSpacing: -0.2,
+
     textAlign: 'center',
   },
-  topLabel: {
+
+  outerTopLabel: {
     position: 'absolute',
-    top: 2,
-    left: 4,
-    fontSize: 7,
+    top: -11,
+    left: 0,
+    right: 0,
+
+    fontSize: 9,
     fontWeight: '800',
-    fontFamily: 'Arial',
-    letterSpacing: 0.2,
-    lineHeight: 8,
+
+    letterSpacing: -0.1,
+    lineHeight: 10,
+
+    textAlign: 'center',
   },
+
   bottomLabel: {
     position: 'absolute',
-    bottom: 2,
+    bottom: 1,
     left: 4,
-    fontSize: 7,
+
+    fontSize: 6.5,
     fontWeight: '800',
-    fontFamily: 'Arial',
-    letterSpacing: 0.2,
-    lineHeight: 8,
+
+    letterSpacing: -0.1,
+    lineHeight: 7,
   },
 });
 
