@@ -12,6 +12,7 @@ export interface CalculatorState {
   isError: boolean;
   history: string[];
   historyIndex: number;
+  statisticalData: number[];
 }
 
 export const useCalculator = () => {
@@ -26,6 +27,7 @@ export const useCalculator = () => {
   const [isError, setIsError] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [statisticalData, setStatisticalData] = useState<number[]>([]);
 
   const toRad = useCallback((angle: number) => {
     if (angleMode === 'DEG') return (angle * Math.PI) / 180;
@@ -52,6 +54,18 @@ export const useCalculator = () => {
       
       // Handle factorial
       e = e.replace(/(\d+(?:\.\d+)?)!(?![^(]*\))/g, (_, num) => {
+        const n = parseFloat(num);
+        if (n < 0 || n !== Math.floor(n)) return 'NaN';
+        if (n > 170) return 'Infinity'; // Prevent overflow
+        let result = 1;
+        for (let i = 2; i <= n; i++) {
+          result *= i;
+        }
+        return result.toString();
+      });
+      
+      // Handle factorial in parentheses (n!)
+      e = e.replace(/\((\d+(?:\.\d+)?)!\)/g, (_, num) => {
         const n = parseFloat(num);
         if (n < 0 || n !== Math.floor(n)) return 'NaN';
         if (n > 170) return 'Infinity'; // Prevent overflow
@@ -152,9 +166,9 @@ export const useCalculator = () => {
       e = e.replace(/10ˣ\(([^)]+)\)/g, (_, x) => Math.pow(10, parseFloat(x)).toString());
       e = e.replace(/eˣ\(([^)]+)\)/g, (_, x) => Math.exp(parseFloat(x)).toString());
       
-      // Handle root functions
-      e = e.replace(/√\(([^)]+)\)/g, (_, x) => Math.sqrt(parseFloat(x)).toString());
+      // Handle root functions - cube root must come before square root
       e = e.replace(/³√\(([^)]+)\)/g, (_, x) => Math.cbrt(parseFloat(x)).toString());
+      e = e.replace(/√\(([^)]+)\)/g, (_, x) => Math.sqrt(parseFloat(x)).toString());
       
       // Handle power functions like x², x³
       e = e.replace(/\^(\s*2\s*)/g, '**2');
@@ -267,6 +281,27 @@ export const useCalculator = () => {
     return val.toExponential(6);
   };
 
+  // Statistical functions
+  const addToStatisticalData = useCallback((value: number) => {
+    setStatisticalData(prev => [...prev, value]);
+  }, []);
+
+  const clearStatisticalData = useCallback(() => {
+    setStatisticalData([]);
+  }, []);
+
+  const calculateStatisticalSum = useCallback(() => {
+    return statisticalData.reduce((sum, val) => sum + val, 0);
+  }, [statisticalData]);
+
+  const calculateStatisticalVariance = useCallback(() => {
+    if (statisticalData.length === 0) return 0;
+    const mean = calculateStatisticalSum() / statisticalData.length;
+    const squaredDiffs = statisticalData.map(val => Math.pow(val - mean, 2));
+    const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / statisticalData.length;
+    return variance;
+  }, [statisticalData, calculateStatisticalSum]);
+
   return {
     display,
     setDisplay,
@@ -290,6 +325,12 @@ export const useCalculator = () => {
     setHistory,
     historyIndex,
     setHistoryIndex,
+    statisticalData,
+    setStatisticalData,
+    addToStatisticalData,
+    clearStatisticalData,
+    calculateStatisticalSum,
+    calculateStatisticalVariance,
     toRad,
     computeExpression,
     formatDisplay,

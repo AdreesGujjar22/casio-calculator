@@ -25,6 +25,7 @@ const App: React.FC = () => {
     isError,
     history,
     historyIndex,
+    statisticalData,
     toRad,
     computeExpression,
     formatDisplay,
@@ -39,6 +40,10 @@ const App: React.FC = () => {
     setIsError,
     setHistory,
     setHistoryIndex,
+    addToStatisticalData,
+    clearStatisticalData,
+    calculateStatisticalSum,
+    calculateStatisticalVariance,
   } = useCalculator();
 
   const handleButton = useCallback((label: string) => {
@@ -66,6 +71,7 @@ const App: React.FC = () => {
       setIsError(false);
       setShift(false);
       setAlpha(false);
+      clearStatisticalData();
       return;
     }
     if (label === "CLR") {
@@ -76,6 +82,7 @@ const App: React.FC = () => {
         setJustEvaluated(false);
         setIsError(false);
         setAlpha(false);
+        clearStatisticalData();
         return;
       }
       return; // Do nothing when CLR is pressed without SHIFT
@@ -89,6 +96,7 @@ const App: React.FC = () => {
         setJustEvaluated(false);
         setIsError(false);
         setAlpha(false);
+        clearStatisticalData();
         return;
       }
       setAngleMode((m: string) => {
@@ -154,11 +162,21 @@ const App: React.FC = () => {
       return;
     }
     if (label === "x³") {
-      setExpression((prev: string) => prev + "^(3)");
+      if (shift) {
+        setShift(false);
+        setExpression((prev: string) => prev + "³√(");
+      } else {
+        setExpression((prev: string) => prev + "^(3)");
+      }
       return;
     }
     if (label === "x⁻¹") {
-      setExpression((prev: string) => prev + "^(-1)");
+      if (shift) {
+        setShift(false);
+        setExpression((prev: string) => prev + "!");
+      } else {
+        setExpression((prev: string) => prev + "^(-1)");
+      }
       return;
     }
     if (label === "EXP") {
@@ -277,6 +295,8 @@ const App: React.FC = () => {
       setExpression(finalExpr + "="); // Show expression with equal sign
       if (typeof result === 'number') {
         setLastResult(result);
+        // Automatically add result to statistical data
+        addToStatisticalData(result);
       }
       setJustEvaluated(true);
       
@@ -320,8 +340,15 @@ const App: React.FC = () => {
       if (shift) {
         setShift(false);
         // S-SUM - Sum of statistical data
-        setExpression("S-SUM");
-        setDisplay("0");
+        if (statisticalData.length === 0) {
+          setDisplay("No Data");
+          setExpression("S-SUM");
+          setJustEvaluated(true);
+          return;
+        }
+        const sum = calculateStatisticalSum();
+        setDisplay(formatDisplay(sum));
+        setExpression(`S-SUM(${statisticalData.length} items)`);
         setJustEvaluated(true);
         return;
       }
@@ -330,8 +357,15 @@ const App: React.FC = () => {
       if (shift) {
         setShift(false);
         // S-VAR - Statistical variance
-        setExpression("S-VAR");
-        setDisplay("0");
+        if (statisticalData.length === 0) {
+          setDisplay("No Data");
+          setExpression("S-VAR");
+          setJustEvaluated(true);
+          return;
+        }
+        const variance = calculateStatisticalVariance();
+        setDisplay(formatDisplay(variance));
+        setExpression(`S-VAR(${statisticalData.length} items)`);
         setJustEvaluated(true);
         return;
       }
@@ -385,6 +419,8 @@ const App: React.FC = () => {
       // Only set lastResult if it's a valid number
       if (typeof result === 'number') {
         setLastResult(result);
+        // Automatically add result to statistical data
+        addToStatisticalData(result);
       }
       setJustEvaluated(true);
       
